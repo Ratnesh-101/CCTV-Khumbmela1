@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CCTV Risk Intelligence — Kumbh Mela use case &amp; code pipeline</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #0f1419; color: #e6edf3; }
+    .deck { height: 100vh; overflow: hidden; position: relative; }
+    .slide {
+      display: none; height: 100vh; padding: 2.2rem 3rem; overflow-y: auto;
+      background: linear-gradient(160deg, #161b22 0%, #0d1117 100%);
+      border-left: 4px solid #238636;
+    }
+    .slide.active { display: block; }
+    h1 { font-size: 1.85rem; margin: 0 0 0.5rem; color: #58a6ff; }
+    h2 { font-size: 1.25rem; margin: 0 0 0.85rem; color: #79c0ff; border-bottom: 1px solid #30363d; padding-bottom: 0.4rem; }
+    .sub { color: #8b949e; font-size: 0.98rem; margin-bottom: 1.25rem; line-height: 1.55; }
+    ul { margin: 0; padding-left: 1.2rem; line-height: 1.55; font-size: 0.98rem; }
+    li { margin-bottom: 0.5rem; }
+    code { background: #21262d; padding: 0.12em 0.35em; border-radius: 4px; font-size: 0.88em; }
+    pre {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      padding: 0.85rem 1rem; font-size: 0.78rem; line-height: 1.45; overflow-x: auto;
+      color: #c9d1d9; margin: 0.75rem 0 0;
+    }
+    pre code { background: none; padding: 0; }
+    .tag { display: inline-block; background: #21262d; color: #7ee787; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-bottom: 0.5rem; }
+    .nav {
+      position: fixed; bottom: 1rem; right: 1rem; z-index: 10;
+      display: flex; gap: 0.5rem; align-items: center;
+    }
+    .nav button {
+      background: #238636; color: #fff; border: none; padding: 0.55rem 0.95rem;
+      border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+    }
+    .nav button:hover { background: #2ea043; }
+    .nav span { color: #8b949e; font-size: 0.8rem; margin-right: 0.5rem; }
+    .hint { position: fixed; bottom: 1rem; left: 1rem; color: #484f58; font-size: 0.75rem; max-width: 55%; }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <!-- 1 -->
+    <section class="slide active" data-i="0">
+      <span class="tag">Hackathon deck · 9 slides</span>
+      <h1>CCTV Risk Intelligence Stack</h1>
+      <p class="sub">
+        <strong>Real-world anchor:</strong> <em>Maha Kumbh Mela</em>–scale gatherings — millions on ghats &amp; corridors, fixed CCTV on bridges and routes.<br />
+        This stack fuses perception signals so <strong>one operator</strong> can prioritize feeds before a situation escalates (crowd surge, dispute, unattended object, traffic incident).<br />
+        <strong>Tech:</strong> Python · YOLOv8 · OpenCV · PyTorch · Streamlit · LangChain · FAISS · scikit-learn · Gymnasium
+      </p>
+    </section>
+    <!-- 2 -->
+    <section class="slide" data-i="1">
+      <h2>Why Kumbh Mela is the right example</h2>
+      <ul>
+        <li><strong>Scale:</strong> Extremely high person density; small delays in noticing crowding or commotion matter.</li>
+        <li><strong>Infrastructure:</strong> Mela authorities deploy <strong>hundreds of fixed cameras</strong> — not body-worn — matching our “fixed CCTV” design.</li>
+        <li><strong>Operational reality:</strong> Control rooms see <strong>too many tiles</strong>; raw YOLO boxes don’t say “getting worse over 30s” or “which cue to trust.”</li>
+        <li><strong>Use we support:</strong> <strong>Scene-level risk ranking</strong> + playbook text (RAG) for SOP recall — <em>not</em> mass facial recognition of pilgrims.</li>
+      </ul>
+    </section>
+    <!-- 3 -->
+    <section class="slide" data-i="2">
+      <h2>What problem this pipeline solves</h2>
+      <ul>
+        <li><strong>Fragmentation:</strong> Detections, motion, and heuristics live in separate heads — operators get noise, not a single trend line.</li>
+        <li><strong>No fused score:</strong> We produce a <strong>transparent 0–100 risk scalar</strong> plus <strong>named flags</strong> (<code>disturbance_motion</code>, <code>dense_crowd</code>, …) per frame.</li>
+        <li><strong>No escalation hint:</strong> A small <strong>tabular Q-policy</strong> suggests a discrete action class (demo) to structure alert debouncing.</li>
+        <li><strong>No procedure memory:</strong> <strong>RAG</strong> retrieves crowd / lost-article / evacuation snippets for the operator console.</li>
+        <li><strong>Kumbh mapping:</strong> Crowd + motion + proximity ≈ <em>pressure on corridors</em>; unattended bags ≈ <em>security SOP</em>; optional audio spike ≈ <em>incident cue</em> (demo-level).</li>
+      </ul>
+    </section>
+    <!-- 4 -->
+    <section class="slide" data-i="3">
+      <h2>Code pipeline (repository map)</h2>
+      <p class="sub">End-to-end path in this repo — each box is importable Python.</p>
+      <ul>
+        <li><code>app.py</code> — Streamlit UI: upload → loop below → Plotly charts + <code>st.video</code>.</li>
+        <li><code>process_video.py</code> — Same CV + risk loop; writes <code>annotated.mp4</code> + <code>events.csv</code>.</li>
+        <li><code>src/video_pipeline.py</code> — <code>VideoAnalyzer.analyze_frame()</code> → <code>FrameSignals</code>; <code>draw_overlay()</code>.</li>
+        <li><code>src/risk_scorer.py</code> — <code>compute_risk()</code>, <code>WEIGHTS</code>, semantic <code>labels</code>.</li>
+        <li><code>src/rl_policy.py</code> — <code>rl_action()</code>, <code>load_or_train_q()</code>, <code>models/q_table.npy</code>.</li>
+        <li><code>src/rag_ops.py</code> — <code>retrieve_context()</code>, <code>rag_operator_brief()</code>.</li>
+        <li><code>src/video_io.py</code> — <code>open_video_writer()</code> (browser-safe codecs).</li>
+        <li><code>src/wifi_drone_anomaly.py</code> — Isolation Forest + optional embedding blend.</li>
+      </ul>
+    </section>
+    <!-- 5 -->
+    <section class="slide" data-i="4">
+      <h2>Core loop (simplified code)</h2>
+      <p class="sub">This is the actual orchestration pattern inside <code>app.py</code> / <code>process_video.py</code>:</p>
+      <pre><code>while frames:
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    sig = analyzer.analyze_frame(frame, prev_gray, gray, tracker)
+    rs = compute_risk(
+        person_count=sig.person_count,
+        motion_score=sig.motion_score,
+        proximity_cluster_score=sig.proximity_cluster_score,
+        abandoned_seconds=sig.abandoned_max_seconds,
+        weapon_like_score=sig.weapon_like_score,
+        fight_like_score=sig.fight_like_score,
+        theft_like_score=sig.theft_like_score,
+        accident_like_score=sig.accident_like_score,
+        missile_like_score=sig.missile_like_score,
+        drone_like_score=sig.drone_like_score,
+        wifi_rf_anomaly_score=wifi_score,
+        ...
+    )
+    act_id, act_name = rl_action(rs.total, cooldown_state, Q_table)
+    writer.write(draw_overlay(frame, sig, rs.total, rs.labels))</code></pre>
+    </section>
+    <!-- 6 -->
+    <section class="slide" data-i="5">
+      <h2>Perception &amp; fusion (technical)</h2>
+      <ul>
+        <li><strong>YOLOv8</strong> (<code>VideoAnalyzer</code>): persons, bags, optional custom classes (fight, accident, weapon, …) via name sets.</li>
+        <li><strong>Optical flow</strong> (<code>motion_from_flow</code>): Farneback on masked person ROIs → <code>motion_score</code>.</li>
+        <li><strong>Proximity</strong> (<code>proximity_score</code>): pairwise person centroids → crowding cue (Kumbh: corridor crush proxy).</li>
+        <li><strong>Bags</strong> (<code>SimpleBagTracker</code>): idle time + owner distance → <code>abandoned_max_seconds</code>.</li>
+        <li><strong>Fusion</strong> (<code>compute_risk</code>): weighted sum of normalized components → <code>total</code> + thresholded <code>labels</code>.</li>
+      </ul>
+    </section>
+    <!-- 7 -->
+    <section class="slide" data-i="6">
+      <h2>RL · RAG · optional sensors</h2>
+      <ul>
+        <li><strong>RL:</strong> <code>risk_bucket(rs.total)</code> discretizes score; Q-table outputs escalation hint with cooldown debouncing.</li>
+        <li><strong>RAG:</strong> LangChain + FAISS + embeddings — operator queries (“unattended bag procedure”) without leaving the console.</li>
+        <li><strong>Wi-Fi tab:</strong> Isolation Forest on flow features — separate from video; demo for anomaly “cue” fusion.</li>
+        <li><strong>Audio tab:</strong> Transient energy heuristic → <code>acoustic_threat</code> channel (not a gunshot classifier).</li>
+      </ul>
+    </section>
+    <!-- 8 -->
+    <section class="slide" data-i="7">
+      <h2>Outputs for a Mela control room</h2>
+      <ul>
+        <li><strong>Annotated MP4/AVI:</strong> boxes + <code>[tags]</code> + green risk-flag strip — quick visual audit.</li>
+        <li><strong>Time-series:</strong> risk vs time + stacked components — “which camera is heating up.”</li>
+        <li><strong>CSV / dataframe tail:</strong> per-frame log for post-incident review or threshold tuning.</li>
+        <li><strong>Geotagged alerts (simulated):</strong> fixed camera lat/lng in UI — maps to physical sector on the ground.</li>
+      </ul>
+    </section>
+    <!-- 9 -->
+    <section class="slide" data-i="8">
+      <h2>Honest limits @ Kumbh-scale deployment</h2>
+      <ul>
+        <li><strong>Not a certified crowd-safety system</strong> — heuristics false-alarm on normal density; <strong>human confirmation</strong> required.</li>
+        <li><strong>Train on Mela/CCTV data</strong> for fight, accident, stampede-like motion if those labels exist; COCO alone is insufficient.</li>
+        <li><strong>Privacy &amp; law:</strong> use for <strong>public-safety operations</strong> with governance; avoid repurposing for individual tracking at scale.</li>
+        <li><strong>Engineering next:</strong> edge inference, NTP-synced multi-camera correlation, calibrated thresholds per sector, formal incident workflow.</li>
+        <li><strong>Q&amp;A</strong></li>
+      </ul>
+    </section>
+  </div>
+  <p class="hint">← → Space · Open in Chrome/Edge · File: presentations/CCTV_Risk_Hackathon_Deck.html</p>
+  <div class="nav">
+    <span id="cur">1 / 9</span>
+    <button type="button" id="prev">Previous</button>
+    <button type="button" id="next">Next</button>
+  </div>
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    let i = 0;
+    function show(n) {
+      i = (n + slides.length) % slides.length;
+      slides.forEach((s, j) => s.classList.toggle("active", j === i));
+      document.getElementById("cur").textContent = (i + 1) + " / " + slides.length;
+    }
+    document.getElementById("prev").onclick = () => show(i - 1);
+    document.getElementById("next").onclick = () => show(i + 1);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "Enter") { e.preventDefault(); show(i + 1); }
+      if (e.key === "ArrowLeft") show(i - 1);
+    });
+  </script>
+</body>
+</html>
