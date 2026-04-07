@@ -112,6 +112,19 @@ class FrameSignals:
     drone_box_tags: List[str] = field(default_factory=list)
     accident_box_tags: List[str] = field(default_factory=list)
     vehicle_box_tags: List[str] = field(default_factory=list)
+    # NEW v2 fields
+    pocket_knife_score: float = 0.0
+    pocket_knife_boxes: List[Tuple[float, float, float, float]] = field(default_factory=list)
+    pocket_knife_tags: List[str] = field(default_factory=list)
+    gun_pointing_score: float = 0.0
+    gun_pointing_boxes: List[Tuple[float, float, float, float]] = field(default_factory=list)
+    gun_pointing_tags: List[str] = field(default_factory=list)
+    unauthorised_thela_score: float = 0.0
+    thela_boxes: List[Tuple[float, float, float, float]] = field(default_factory=list)
+    thela_tags: List[str] = field(default_factory=list)
+    bad_road_score: float = 0.0
+    bad_road_boxes: List[Tuple[float, float, float, float]] = field(default_factory=list)
+    bad_road_tags: List[str] = field(default_factory=list)
 
 
 def _centroid(box: Tuple[float, float, float, float]) -> Tuple[float, float]:
@@ -334,6 +347,62 @@ DEFAULT_ACCIDENT_CLASS_NAMES = frozenset(
     }
 )
 
+# Pocket knife / small blade classes (custom model needed for real accuracy)
+DEFAULT_KNIFE_CLASS_NAMES = frozenset(
+    {
+        "knife",
+        "pocket_knife",
+        "blade",
+        "switchblade",
+        "penknife",
+        "small_blade",
+        "folding_knife",
+        "cutter",
+    }
+)
+
+# Gun-pointing / aimed-weapon posture classes (custom model needed)
+DEFAULT_GUN_POINTING_CLASS_NAMES = frozenset(
+    {
+        "gun_pointing",
+        "aimed_gun",
+        "weapon_aimed",
+        "gun_aimed",
+        "pistol_aimed",
+        "shooting_posture",
+        "gun_threat",
+        "armed_threat",
+    }
+)
+
+# Unauthorised street vendor / thela classes (custom model needed)
+DEFAULT_THELA_CLASS_NAMES = frozenset(
+    {
+        "thela",
+        "street_vendor",
+        "unauthorised_vendor",
+        "cart_vendor",
+        "hawker",
+        "unauthorized_stall",
+        "roadside_cart",
+        "street_cart",
+    }
+)
+
+# Bad road / road hazard classes (custom model needed)
+DEFAULT_BAD_ROAD_CLASS_NAMES = frozenset(
+    {
+        "pothole",
+        "road_damage",
+        "road_debris",
+        "bad_road",
+        "road_hazard",
+        "broken_road",
+        "cracked_road",
+        "flooded_road",
+        "road_blockage",
+    }
+)
 
 class VideoAnalyzer:
     """
@@ -358,6 +427,15 @@ class VideoAnalyzer:
         theft_conf_threshold: float = 0.4,
         accident_class_names: Optional[set[str]] = None,
         accident_conf_threshold: float = 0.4,
+        # NEW v2
+        knife_class_names: Optional[set[str]] = None,
+        knife_conf_threshold: float = 0.40,
+        gun_pointing_class_names: Optional[set[str]] = None,
+        gun_pointing_conf_threshold: float = 0.40,
+        thela_class_names: Optional[set[str]] = None,
+        thela_conf_threshold: float = 0.40,
+        bad_road_class_names: Optional[set[str]] = None,
+        bad_road_conf_threshold: float = 0.40,
     ) -> None:
         from ultralytics import YOLO
 
@@ -391,6 +469,15 @@ class VideoAnalyzer:
             for n in (accident_class_names or DEFAULT_ACCIDENT_CLASS_NAMES)
         }
         self.accident_conf_threshold = accident_conf_threshold
+        # NEW v2
+        self.knife_class_names = {n.strip().lower() for n in (knife_class_names or DEFAULT_KNIFE_CLASS_NAMES)}
+        self.knife_conf_threshold = knife_conf_threshold
+        self.gun_pointing_class_names = {n.strip().lower() for n in (gun_pointing_class_names or DEFAULT_GUN_POINTING_CLASS_NAMES)}
+        self.gun_pointing_conf_threshold = gun_pointing_conf_threshold
+        self.thela_class_names = {n.strip().lower() for n in (thela_class_names or DEFAULT_THELA_CLASS_NAMES)}
+        self.thela_conf_threshold = thela_conf_threshold
+        self.bad_road_class_names = {n.strip().lower() for n in (bad_road_class_names or DEFAULT_BAD_ROAD_CLASS_NAMES)}
+        self.bad_road_conf_threshold = bad_road_conf_threshold
         self.names = self.model.names
         self.class_to_name = {int(k): str(v) for k, v in self.names.items()}
 
@@ -438,26 +525,29 @@ class VideoAnalyzer:
         drone_tags: List[str] = []
         vehicle_boxes: List[Tuple[float, float, float, float]] = []
         vehicle_tags: List[str] = []
+        knife_boxes: List[Tuple[float, float, float, float]] = []
+        knife_tags: List[str] = []
+        gun_pointing_boxes: List[Tuple[float, float, float, float]] = []
+        gun_pointing_tags: List[str] = []
+        thela_boxes: List[Tuple[float, float, float, float]] = []
+        thela_tags: List[str] = []
+        bad_road_boxes: List[Tuple[float, float, float, float]] = []
+        bad_road_tags: List[str] = []
         if result.boxes is None or len(result.boxes) == 0:
             return (
-                person_boxes,
-                person_tags,
-                bag_boxes,
-                bag_tags,
-                weapon_boxes,
-                weapon_tags,
-                fight_boxes,
-                fight_tags,
-                theft_boxes,
-                theft_tags,
-                accident_boxes,
-                accident_tags,
-                missile_boxes,
-                missile_tags,
-                drone_boxes,
-                drone_tags,
-                vehicle_boxes,
-                vehicle_tags,
+                person_boxes, person_tags,
+                bag_boxes, bag_tags,
+                weapon_boxes, weapon_tags,
+                fight_boxes, fight_tags,
+                theft_boxes, theft_tags,
+                accident_boxes, accident_tags,
+                missile_boxes, missile_tags,
+                drone_boxes, drone_tags,
+                vehicle_boxes, vehicle_tags,
+                knife_boxes, knife_tags,
+                gun_pointing_boxes, gun_pointing_tags,
+                thela_boxes, thela_tags,
+                bad_road_boxes, bad_road_tags,
             )
         xyxy = result.boxes.xyxy.cpu().numpy()
         cls = result.boxes.cls.cpu().numpy().astype(int)
@@ -495,25 +585,32 @@ class VideoAnalyzer:
             elif name in DEFAULT_COCO_VEHICLE_NAMES:
                 vehicle_boxes.append(box)
                 vehicle_tags.append(_tag(name))
+            elif name in self.knife_class_names and cf >= self.knife_conf_threshold:
+                knife_boxes.append(box)
+                knife_tags.append(_tag(name))
+            elif name in self.gun_pointing_class_names and cf >= self.gun_pointing_conf_threshold:
+                gun_pointing_boxes.append(box)
+                gun_pointing_tags.append(_tag(name))
+            elif name in self.thela_class_names and cf >= self.thela_conf_threshold:
+                thela_boxes.append(box)
+                thela_tags.append(_tag(name))
+            elif name in self.bad_road_class_names and cf >= self.bad_road_conf_threshold:
+                bad_road_boxes.append(box)
+                bad_road_tags.append(_tag(name))
         return (
-            person_boxes,
-            person_tags,
-            bag_boxes,
-            bag_tags,
-            weapon_boxes,
-            weapon_tags,
-            fight_boxes,
-            fight_tags,
-            theft_boxes,
-            theft_tags,
-            accident_boxes,
-            accident_tags,
-            missile_boxes,
-            missile_tags,
-            drone_boxes,
-            drone_tags,
-            vehicle_boxes,
-            vehicle_tags,
+            person_boxes, person_tags,
+            bag_boxes, bag_tags,
+            weapon_boxes, weapon_tags,
+            fight_boxes, fight_tags,
+            theft_boxes, theft_tags,
+            accident_boxes, accident_tags,
+            missile_boxes, missile_tags,
+            drone_boxes, drone_tags,
+            vehicle_boxes, vehicle_tags,
+            knife_boxes, knife_tags,
+            gun_pointing_boxes, gun_pointing_tags,
+            thela_boxes, thela_tags,
+            bad_road_boxes, bad_road_tags,
         )
 
     def analyze_frame(
@@ -527,24 +624,19 @@ class VideoAnalyzer:
             frame_bgr, verbose=False, device=self.device, imgsz=640
         )[0]
         (
-            person_boxes,
-            person_tags,
-            bag_boxes,
-            bag_tags,
-            weapon_boxes,
-            weapon_tags,
-            fight_boxes,
-            fight_tags,
-            theft_boxes,
-            theft_tags,
-            accident_boxes,
-            accident_tags,
-            missile_boxes,
-            missile_tags,
-            drone_boxes,
-            drone_tags,
-            vehicle_boxes,
-            vehicle_tags,
+            person_boxes, person_tags,
+            bag_boxes, bag_tags,
+            weapon_boxes, weapon_tags,
+            fight_boxes, fight_tags,
+            theft_boxes, theft_tags,
+            accident_boxes, accident_tags,
+            missile_boxes, missile_tags,
+            drone_boxes, drone_tags,
+            vehicle_boxes, vehicle_tags,
+            knife_boxes, knife_tags,
+            gun_pointing_boxes, gun_pointing_tags,
+            thela_boxes, thela_tags,
+            bad_road_boxes, bad_road_tags,
         ) = self._extract_boxes(res)
 
         mask = np.zeros(gray.shape[:2], dtype=np.uint8)
@@ -579,6 +671,12 @@ class VideoAnalyzer:
         accident_det = min(1.0, len(accident_boxes) * 0.55)
         accident_score = max(ah, accident_det)
 
+        # NEW v2 scores — each box = 0.55 confidence contribution, capped at 1.0
+        knife_score = min(1.0, len(knife_boxes) * 0.55)
+        gun_pointing_score = min(1.0, len(gun_pointing_boxes) * 0.65)   # higher weight per box
+        thela_score = min(1.0, len(thela_boxes) * 0.55)
+        bad_road_score = min(1.0, len(bad_road_boxes) * 0.55)
+
         return FrameSignals(
             person_count=len(person_boxes),
             person_boxes=person_boxes,
@@ -608,6 +706,19 @@ class VideoAnalyzer:
             drone_box_tags=drone_tags,
             accident_box_tags=accident_tags,
             vehicle_box_tags=vehicle_tags,
+            # NEW v2
+            pocket_knife_score=knife_score,
+            pocket_knife_boxes=knife_boxes,
+            pocket_knife_tags=knife_tags,
+            gun_pointing_score=gun_pointing_score,
+            gun_pointing_boxes=gun_pointing_boxes,
+            gun_pointing_tags=gun_pointing_tags,
+            unauthorised_thela_score=thela_score,
+            thela_boxes=thela_boxes,
+            thela_tags=thela_tags,
+            bad_road_score=bad_road_score,
+            bad_road_boxes=bad_road_boxes,
+            bad_road_tags=bad_road_tags,
         )
 
 
@@ -750,6 +861,32 @@ def draw_overlay(
                 thickness=1,
             )
 
+    # NEW v2 — all drawn RED (0,0,255) to signal immediate danger
+    for i, kb in enumerate(signals.pocket_knife_boxes):
+        _draw_tagged_box(
+            out, kb,
+            signals.pocket_knife_tags[i] if i < len(signals.pocket_knife_tags) else "pocket_knife",
+            (0, 0, 255), (0, 0, 140), thickness=3,
+        )
+    for i, gb in enumerate(signals.gun_pointing_boxes):
+        _draw_tagged_box(
+            out, gb,
+            signals.gun_pointing_tags[i] if i < len(signals.gun_pointing_tags) else "gun_pointing",
+            (0, 0, 255), (0, 0, 160), thickness=4,
+        )
+    for i, tb in enumerate(signals.thela_boxes):
+        _draw_tagged_box(
+            out, tb,
+            signals.thela_tags[i] if i < len(signals.thela_tags) else "unauth_thela",
+            (0, 0, 220), (0, 0, 120), thickness=3,
+        )
+    for i, rb in enumerate(signals.bad_road_boxes):
+        _draw_tagged_box(
+            out, rb,
+            signals.bad_road_tags[i] if i < len(signals.bad_road_tags) else "bad_road",
+            (0, 0, 200), (0, 0, 100), thickness=3,
+        )
+
     metrics_h = 52 if location_line else 38
     risk_band_h = 36
     txt = (
@@ -783,8 +920,16 @@ def draw_overlay(
     # Green band = fused risk types (square-bracket labels)
     y_r0 = metrics_h
     y_r1 = metrics_h + risk_band_h
-    cv2.rectangle(out, (0, y_r0), (w_img, y_r1), (0, 160, 0), -1)
-    cv2.rectangle(out, (0, y_r0), (w_img, y_r1), (0, 220, 100), 2)
+    RED_LABEL_KEYWORDS = {
+        "mass_gathering", "dense_crowd", "pocket_knife_detected",
+        "gun_pointing_detected", "unauthorised_thela_detected",
+        "bad_road_hazard", "weapon_like_unverified", "fight_like_unverified",
+    }
+    is_red_frame = any(lb in RED_LABEL_KEYWORDS for lb in labels) or risk_total >= 80
+    band_bg  = (0, 0, 180) if is_red_frame else (0, 160, 0)
+    band_brdr = (100, 0, 255) if is_red_frame else (0, 220, 100)
+    cv2.rectangle(out, (0, y_r0), (w_img, y_r1), band_bg, -1)
+    cv2.rectangle(out, (0, y_r0), (w_img, y_r1), band_brdr, 2)
     if labels:
         risk_line = "RISK FLAGS: " + " ".join(_bracket(lb) for lb in labels)
     else:
