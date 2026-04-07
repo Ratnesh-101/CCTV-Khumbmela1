@@ -1,0 +1,27 @@
+# Copy to your dataset folder (e.g. datasets/my_cctv/dataset.yaml) and fix `path`.
+# Put images under path/images/train and path/images/val
+# Put YOLO labels (.txt per image, same stem) under path/labels/train and path/labels/val
+#
+# Class indices must match your label files (0, 1, 2, ...).
+# Use the SAME spelling in the Streamlit app (fight class names, weapon names, etc.).
+
+path: datasets/my_cctv   # folder that contains images/ and labels/
+train: images/train
+val: images/val
+
+# Minimum useful set for Indian road / CCTV demos (add or remove to match your labels)
+names:
+  0: person
+  1: backpack
+  2: handbag
+  3: suitcase
+  4: fight
+  5: road_rage
+  6: scuffle
+  7: gun
+  8: knife
+  9: shoplifting
+  10: theft
+  11: accident
+  12: crash
+  13: road_accident

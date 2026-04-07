@@ -1,0 +1,13 @@
+datasets/
+runs/
+output/*.mp4
+output/*.csv
+output/_upload.mp4
+models/q_table.npy
+models/demo_trained_yolov8n.pt
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+external/
