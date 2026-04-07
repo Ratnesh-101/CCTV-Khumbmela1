@@ -325,6 +325,33 @@ with tab_dash:
                 value="gun,knife,pistol,rifle",
             )
             weapon_names = {x.strip().lower() for x in weapon_extra.split(",") if x.strip()}
+
+            st.markdown("---")
+            st.markdown("**New v2 threat categories** — add your custom trained class names below:")
+
+            knife_cls_str = st.text_input(
+                "Pocket knife / blade class names",
+                value="knife,pocket_knife,blade,switchblade,penknife,small_blade,folding_knife,cutter",
+            )
+            knife_names = {x.strip().lower() for x in knife_cls_str.split(",") if x.strip()}
+
+            gun_point_cls_str = st.text_input(
+                "Gun-pointing / aimed weapon class names",
+                value="gun_pointing,aimed_gun,weapon_aimed,gun_aimed,pistol_aimed,shooting_posture,gun_threat,armed_threat",
+            )
+            gun_pointing_names = {x.strip().lower() for x in gun_point_cls_str.split(",") if x.strip()}
+
+            thela_cls_str = st.text_input(
+                "Unauthorised thela / street vendor class names",
+                value="thela,street_vendor,unauthorised_vendor,cart_vendor,hawker,unauthorized_stall,roadside_cart,street_cart",
+            )
+            thela_names = {x.strip().lower() for x in thela_cls_str.split(",") if x.strip()}
+
+            bad_road_cls_str = st.text_input(
+                "Bad road / road hazard class names",
+                value="pothole,road_damage,road_debris,bad_road,road_hazard,broken_road,cracked_road,flooded_road,road_blockage",
+            )
+            bad_road_names = {x.strip().lower() for x in bad_road_cls_str.split(",") if x.strip()}
             fight_cls_str = st.text_input(
                 "Fight / violence class names (comma-separated)",
                 value="fight,fighting,punch,violence,brawl,assault,road_rage,scuffle,street_fight",
@@ -440,6 +467,12 @@ with tab_dash:
                 st.error(str(e))
                 cap.release()
             else:
+                # Provide defaults for new class names in case the expander was not opened
+                _knife_names = locals().get("knife_names") or {"knife","pocket_knife","blade","switchblade","penknife","small_blade","folding_knife","cutter"}
+                _gun_pointing_names = locals().get("gun_pointing_names") or {"gun_pointing","aimed_gun","weapon_aimed","gun_aimed","pistol_aimed","shooting_posture","gun_threat","armed_threat"}
+                _thela_names = locals().get("thela_names") or {"thela","street_vendor","unauthorised_vendor","cart_vendor","hawker","unauthorized_stall","roadside_cart","street_cart"}
+                _bad_road_names = locals().get("bad_road_names") or {"pothole","road_damage","road_debris","bad_road","road_hazard","broken_road","cracked_road","flooded_road","road_blockage"}
+
                 analyzer = VideoAnalyzer(
                     model_name=weights_path.strip() or "yolov8n.pt",
                     device=device if device != "0" else "0",
@@ -449,6 +482,10 @@ with tab_dash:
                     fight_class_names=fight_names,
                     theft_class_names=theft_names,
                     accident_class_names=accident_names,
+                    knife_class_names=_knife_names,
+                    gun_pointing_class_names=_gun_pointing_names,
+                    thela_class_names=_thela_names,
+                    bad_road_class_names=_bad_road_names,
                 )
                 tracker = SimpleBagTracker(fps=fps)
                 prev_gray = None
@@ -477,6 +514,11 @@ with tab_dash:
                         theft_like_score=sig.theft_like_score,
                         accident_like_score=sig.accident_like_score,
                         vehicle_count=len(sig.vehicle_boxes),
+                        # NEW v2
+                        pocket_knife_score=sig.pocket_knife_score,
+                        gun_pointing_score=sig.gun_pointing_score,
+                        unauthorised_thela_score=sig.unauthorised_thela_score,
+                        bad_road_score=sig.bad_road_score,
                     )
                     if cooldown > 0:
                         cooldown -= 1
@@ -549,6 +591,16 @@ with tab_dash:
                     peak = float(df["total"].max())
                     mean_r = float(df["total"].mean())
                     dur = float(df["t"].iloc[-1]) if len(df) else 0.0
+                    # --- Alert level banner ---
+                    if "alert_level" in df.columns:
+                        top_level = df["alert_level"].value_counts().idxmax() if not df.empty else "GREEN"
+                        if top_level == "RED" or peak >= 80:
+                            st.error("🔴 **RED ALERT** — One or more HIGH-RISK events detected (mass gathering / weapon / gun / thela / bad road). Verify immediately.")
+                        elif top_level == "AMBER" or peak >= 50:
+                            st.warning("🟡 **AMBER** — Elevated risk detected. Review the clip and take precautionary action.")
+                        else:
+                            st.success("🟢 **GREEN** — No significant risk flags in this clip.")
+
                     m1, m2, m3 = st.columns(3)
                     with m1:
                         st.metric(
@@ -594,6 +646,11 @@ with tab_dash:
                             "fight_like",
                             "theft_like",
                             "accident_like",
+                            "gathering_risk",
+                            "pocket_knife_like",
+                            "gun_pointing_like",
+                            "unauthorised_thela",
+                            "bad_road",
                         )
                         if c in df.columns
                     ]
