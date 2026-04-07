@@ -36,3 +36,34 @@
 1. **Detection alone does not mean “unauthorized.”** Production systems need **no-fly zones**, **registration/allowlists**, RF/geo cues, and legal process per jurisdiction.
 2. Treat CV flags as **unverified**; correlate with flight plans, venue policy, and second camera / operator confirmation.
 3. Common false positives: birds, distant aircraft, insects, reflections. Prefer models trained on your camera angles and range.
+
+## Mass gathering (automatic RED alert)
+1. System has automatically flagged a **mass gathering** — score forced to RED (≥80).
+2. Dispatch crowd-management team to the flagged camera zone immediately.
+3. Open secondary exits / routes proactively; do not wait for a surge.
+4. PA announcement: calm directional guidance only — avoid panic wording.
+5. Log event with timestamp, camera ID, and estimated headcount from CCTV.
+
+## Pocket knife / small blade detected (RED)
+1. **Do not approach without backup.** Alert armed/trained response team.
+2. Contain the area — ask nearby public to move away calmly.
+3. Operator must visually confirm detection before mass notification.
+4. Preserve CCTV clip with bounding box timestamps for evidence.
+
+## Gun pointing / aimed weapon detected (RED — highest priority)
+1. **Immediate escalation.** Notify armed response and law enforcement simultaneously.
+2. Issue public broadcast only after dual human confirmation to avoid panic.
+3. Do not state certainty in public messaging — use "possible armed threat — verify."
+4. Evacuate nearby zone if confirmed; preserve all CCTV footage.
+
+## Unauthorised thela / street vendor detected (RED)
+1. Dispatch nearest on-ground team to verify the vendor/cart.
+2. If blocking a fire exit, evacuation route, or road: request immediate relocation.
+3. If the vendor refuses to move: escalate to police liaison.
+4. Log camera ID, location, and time for municipal action if required.
+
+## Bad road / road hazard detected (RED)
+1. Alert traffic management team and nearest police post.
+2. If the hazard (pothole, debris, flooding) poses immediate danger: request road closure or diversion.
+3. Notify emergency services if vehicles or persons appear to have been affected.
+4. Forward CCTV clip + GPS coordinates to municipal road authority for repair request.
